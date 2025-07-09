@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Guide: HSS Connection Design (Section 511)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* <!-- Chosen Palette: Calm Harmony --> */
+        :root {
+            --bg-main: #f5f5f4; /* stone-100 */
+            --bg-secondary: #ffffff;
+            --text-primary: #333333; /* neutral-800 */
+            --text-secondary: #57534e; /* stone-600 */
+            --accent-primary: #2563eb; /* blue-600 */
+            --accent-primary-hover: #1d4ed8; /* blue-700 */
+            --border-color: #e7e5e4; /* stone-200 */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+        }
+        .main-nav-btn {
+            transition: all 0.2s ease-in-out;
+            border-bottom: 2px solid transparent;
+        }
+        .main-nav-btn.active, .main-nav-btn:hover {
+            color: var(--accent-primary);
+            border-bottom-color: var(--accent-primary);
+        }
+        .side-nav-link {
+            transition: all 0.2s ease-in-out;
+            border-left: 2px solid transparent;
+        }
+        .side-nav-link.active, .side-nav-link:hover {
+            background-color: var(--bg-main);
+            color: var(--accent-primary);
+            border-left-color: var(--accent-primary);
+        }
+        .formula {
+            background-color: var(--bg-main);
+            border-left: 3px solid var(--accent-primary);
+            padding: 1rem;
+            margin: 1rem 0;
+            font-family: monospace;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .limit-box {
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-secondary);
+        }
+        h1, h2, h3, h4 {
+            font-weight: 600;
+        }
+        .diagram-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+            padding: 2rem 0;
+        }
+        .connection-diagram {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            text-align: center;
+        }
+        .chord {
+            position: absolute;
+            background-color: #a8a29e; /* stone-400 */
+            border: 2px solid var(--text-primary);
+        }
+        .branch {
+            position: absolute;
+            background-color: #d6d3d1; /* stone-300 */
+            border: 2px solid var(--text-primary);
+        }
+        .t-conn .chord { width: 100px; height: 30px; top: 35px; left: 0; }
+        .t-conn .branch { width: 30px; height: 50px; bottom: 50px; left: 35px; }
+        .y-conn .chord { width: 100px; height: 30px; top: 35px; left: 0; }
+        .y-conn .branch { width: 30px; height: 60px; bottom: 45px; left: 35px; transform: rotate(-30deg); transform-origin: bottom center; }
+        .k-conn .chord { width: 100px; height: 30px; top: 35px; left: 0; }
+        .k-conn .branch.one { width: 25px; height: 50px; bottom: 40px; left: 20px; transform: rotate(45deg); transform-origin: bottom center; }
+        .k-conn .branch.two { width: 25px; height: 50px; bottom: 40px; right: 20px; transform: rotate(-45deg); transform-origin: bottom center; }
+        .cross-conn .chord { width: 100px; height: 30px; top: 35px; left: 0; }
+        .cross-conn .branch.one { width: 30px; height: 50px; bottom: 50px; left: 35px; }
+        .cross-conn .branch.two { width: 30px; height: 50px; top: 50px; left: 35px; }
+    </style>
+    <!-- 
+        Application Structure Plan: A single-page application with a two-level navigation system. The top-level tabs switch between major report sections (Concentrated Forces, Truss Connections, Moment Connections). This selection populates a sticky side-navigation menu with links to specific subsections (e.g., Round vs. Rectangular HSS, limit states). This hierarchical structure is intuitive for technical documents, allowing users to drill down from broad categories to specific rules efficiently, which is superior to linear scrolling through the dense PDF.
+        Visualization & Content Choices: 
+        - Report Info: Connection Types (T, Y, K, Cross). Goal: Organize/Inform. Viz: Simple diagrams using styled HTML divs. Interaction: None. Justification: Provides quick visual reference for connection terminology without external images or complex libraries.
+        - Report Info: Mathematical formulas and parameters. Goal: Inform. Viz: Styled text blocks for formulas, tooltips for parameters. Interaction: Hover over a parameter to see its definition. Justification: Tooltips make formulas easier to parse by providing context-on-demand, reducing cognitive load and eliminating the need to scroll to a definitions section.
+        - Report Info: Hierarchical rules and limits. Goal: Organize/Compare. Viz: Nested lists and clearly separated content blocks. Interaction: Main navigation system. Justification: Allows users to quickly jump between and compare rules for different connection types or materials (e.g., round vs. rectangular HSS), a key task for engineers using this specification.
+        CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. 
+    -->
+</head>
+<body class="antialiased">
+
+    <div id="app-container" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">Interactive Guide to HSS Connection Design</h1>
+            <p class="mt-2 text-lg text-stone-600">An easy-to-navigate reference for Section 511 of the National Structural Code of the Philippines</p>
+        </header>
+
+        <nav id="main-nav" class="bg-white rounded-lg shadow-sm mb-6 p-2 flex justify-center items-center space-x-4 md:space-x-8">
+            <!-- Main navigation buttons will be inserted here by JS -->
+        </nav>
+
+        <div class="flex flex-col md:flex-row md:space-x-6">
+            <aside id="side-nav-container" class="w-full md:w-1/4 mb-6 md:mb-0">
+                <div class="sticky top-8">
+                     <h3 id="side-nav-title" class="text-lg font-semibold mb-3 px-2"></h3>
+                     <nav id="side-nav" class="flex flex-col space-y-1">
+                        <!-- Side navigation links will be inserted here by JS -->
+                    </nav>
+                </div>
+            </aside>
+            <main id="content-container" class="w-full md:w-3/4 bg-white p-6 sm:p-8 rounded-lg shadow-sm">
+                <!-- Content will be injected here -->
+            </main>
+        </div>
+    </div>
+
+    <script>
+        const db = {
+            definitions: {
+                B: { name: "B", desc: "Overall width of rectangular HSS member, measured 90 degrees to the plane of the connection, mm" },
+                Bp: { name: "Bₚ", desc: "Width of plate, measured 90 degrees to the plane of the connection, mm" },
+                D: { name: "D", desc: "Outside diameter of round HSS member, mm" },
+                Fy: { name: "Fᵧ", desc: "Specified minimum yield stress of HSS member material, MPa" },
+                Fyp: { name: "Fᵧₚ", desc: "Specified minimum yield stress of plate, MPa" },
+                Fu: { name: "Fᵤ", desc: "Specified minimum tensile strength of HSS material, MPa" },
+                H: { name: "H", desc: "Overall height of rectangular HSS member, measured in the plane of the connection, mm" },
+                N: { name: "N", desc: "Bearing length of the load, measured parallel to the axis of the HSS member, mm" },
+                t: { name: "t", desc: "Design wall thickness of HSS member, mm" },
+                tp: { name: "tₚ", desc: "Thickness of plate, mm" },
+                gamma: { name: "γ", desc: "Chord slenderness ratio; D/2t for round HSS; B/2t for rectangular HSS" },
+                eta: { name: "η", desc: "Load length parameter (rectangular HSS); N/B" },
+                theta: { name: "θ", desc: "Acute angle between the branch and chord (degrees)" },
+                zeta: { name: "ζ", desc: "Gap ratio; g/B for rectangular HSS" },
+                Db: { name: "Dᵦ", desc: "Outside diameter of round HSS branch member, mm" },
+                Hb: { name: "Hᵦ", desc: "Overall height of rectangular HSS branch member, mm" },
+                tb: { name: "tᵦ", desc: "Design wall thickness of HSS branch member, mm" },
+                beta: { name: "β", desc: "Width ratio; Dᵦ/D for round HSS; Bᵦ/B for rectangular HSS" },
+                beta_eff: { name: "βₑբբ", desc: "Effective width ratio for K-connections" },
+                e: { name: "e", desc: "Eccentricity in a truss connection, mm" },
+                Fyb: { name: "Fᵧᵦ", desc: "Specified minimum yield stress of HSS branch member material, MPa" },
+                g: { name: "g", desc: "Gap between toes of branch members in a gapped K-connection, mm" },
+                Qf: { name: "Qᵩ", desc: "Chord-stress interaction parameter" },
+                Rn: { name: "Rₙ", desc: "Nominal strength" },
+                phi: { name: "ϕ", desc: "Resistance factor (LRFD)" },
+                Omega: { name: "Ω", desc: "Safety factor (ASD)" },
+                U: { name: "U", desc: "Utilization ratio" },
+                Le: { name: "Lₑ", desc: "Total effective weld length" },
+                Pr: { name: "Pᵣ", desc: "Required axial strength" },
+                Mr_ip: { name: "Mᵣ₋ᵢₚ", desc: "Required in-plane flexural strength" },
+                Mr_op: { name: "Mᵣ₋ₒₚ", desc: "Required out-of-plane flexural strength" },
+                Pn: { name: "Pₙ", desc: "Nominal axial strength of branch" },
+                Mn_ip: { name: "Mₙ₋ᵢₚ", desc: "Nominal in-plane flexural strength" },
+                Mn_op: { name: "Mₙ₋ₒₚ", desc: "Nominal out-of-plane flexural strength" },
+
+            },
+            content: {
+                welcome: {
+                    title: "Welcome to the HSS Design Guide",
+                    html: `
+                        <p class="text-lg mb-4">This interactive tool is designed to help structural engineers navigate the design provisions for HSS and box member connections as outlined in Section 511 of the National Structural Code of the Philippines, 7th Edition.</p>
+                        <p class="mb-4">The code specifies requirements for various connection types under different loading conditions. This application breaks down the complex clauses into a more digestible format.</p>
+                        <p class="mb-6">Use the main navigation above to select a connection category. The side menu will then allow you to drill down into specific criteria and limit states.</p>
+                        <h4 class="text-xl font-semibold mb-4">Common Connection Types</h4>
+                        <div class="diagram-container">
+                            <div class="text-center">
+                                <div class="connection-diagram t-conn"><div class="chord"></div><div class="branch"></div></div>
+                                <p class="mt-2 font-semibold">T-Connection</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="connection-diagram y-conn"><div class="chord"></div><div class="branch"></div></div>
+                                <p class="mt-2 font-semibold">Y-Connection</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="connection-diagram k-conn"><div class="chord"></div><div class="branch one"></div><div class="branch two"></div></div>
+                                <p class="mt-2 font-semibold">K-Connection</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="connection-diagram cross-conn"><div class="chord"></div><div class="branch one"></div><div class="branch two"></div></div>
+                                <p class="mt-2 font-semibold">Cross-Connection</p>
+                            </div>
+                        </div>
+                    `
+                },
+                concentrated_forces: {
+                    title: "Concentrated Forces on HSS (511.1)",
+                    nav: [
+                        { id: "cf_intro", title: "Introduction & Limits" },
+                        { id: "cf_transversely", title: "Force Distributed Transversely" },
+                        { id: "cf_longitudinally", title: "Force Distributed Longitudinally" },
+                        { id: "cf_cap_plate", title: "Force on Capped End" },
+                    ],
+                    html: {
+                        cf_intro: `
+                            <h3 class="text-2xl font-semibold mb-4">511.1 Concentrated Forces on HSS</h3>
+                            <p class="mb-4">This subsection addresses the design strength for HSS members subjected to concentrated forces applied through plates or other structural elements.</p>
+                            <h4 class="text-xl font-semibold mb-2">511.1.2 Limits of Applicability</h4>
+                            <ul class="list-disc list-inside space-y-2 mb-4 p-4 limit-box rounded-md">
+                                <li><strong>Strength:</strong> <span class="param">Fᵧ</span> ≤ 360 MPa for HSS</li>
+                                <li><strong>Ductility:</strong> <span class="param">Fᵧ</span>/<span class="param">Fᵤ</span> ≤ 0.8 for HSS</li>
+                                <li>Other specific limits apply for individual criteria.</li>
+                            </ul>
+                            <p class="text-sm text-stone-600">Hover over any highlighted parameter like <span class="param">B</span> or <span class="param">t</span> to see its definition.</p>
+                        `,
+                        cf_transversely: `
+                            <h3 class="text-2xl font-semibold mb-4">511.1.3 Concentrated Force Distributed Transversely</h3>
+                            <h4 class="text-xl font-semibold mb-2">511.1.3.1 Criterion for Round HSS</h4>
+                            <p class="mb-2">For the limit state of local yielding:</p>
+                            <div class="formula"><span class="param">Rₙ</span> = <span class="param">Fᵧ</span><span class="param">t</span>² [5.5 / (1 - 0.81<span class="param">Bₚ</span>/<span class="param">D</span>)] <span class="param">Qᵩ</span></div>
+                            <p class="mb-4"><span class="param">ϕ</span> = 0.90 (LRFD), <span class="param">Ω</span> = 1.67 (ASD)</p>
+                            <h4 class="text-xl font-semibold mb-2">511.1.3.2 Criteria for Rectangular HSS</h4>
+                            <p>Available strength is the lowest value from the following limit states:</p>
+                            <div class="mt-4 p-4 border-l-4 border-stone-200">
+                                <h5 class="text-lg font-semibold mb-2">a. Local Yielding (Uneven Load Distribution)</h5>
+                                <div class="formula"><span class="param">Rₙ</span> = [10 <span class="param">Fᵧ</span><span class="param">t</span> / (<span class="param">B</span>/<span class="param">t</span>)] <span class="param">Bₚ</span> ≤ <span class="param">Fᵧₚ</span><span class="param">tₚ</span><span class="param">Bₚ</span></div>
+                                <p class="mb-4"><span class="param">ϕ</span> = 0.95 (LRFD), <span class="param">Ω</span> = 1.58 (ASD)</p>
+                                <h5 class="text-lg font-semibold mb-2">b. Shear Yielding (Punching)</h5>
+                                <div class="formula"><span class="param">Rₙ</span> = 0.6<span class="param">Fᵧ</span><span class="param">t</span> [2<span class="param">tₚ</span> + 2Bₑₚ]</div>
+                                <p class="mb-4"><span class="param">ϕ</span> = 0.95 (LRFD), <span class="param">Ω</span> = 1.58 (ASD)</p>
+                                <h5 class="text-lg font-semibold mb-2">c. Sidewall Strength (when β = 1.0)</h5>
+                                <p class="mb-2">Includes local yielding, crippling, and buckling checks.</p>
+                                <div class="formula">Sidewall Local Yielding: <span class="param">Rₙ</span> = 2<span class="param">Fᵧ</span><span class="param">t</span> [5k + <span class="param">N</span>]</div>
+                            </div>
+                        `,
+                        cf_longitudinally: `
+                            <h3 class="text-2xl font-semibold mb-4">511.1.4 Force Distributed Longitudinally (Perpendicular to Axis)</h3>
+                             <h4 class="text-xl font-semibold mb-2">511.1.4.1 Criterion for Round HSS</h4>
+                            <p class="mb-2">For the limit state of chord plastification:</p>
+                            <div class="formula"><span class="param">Rₙ</span> = 5.5 <span class="param">Fᵧ</span><span class="param">t</span>² (1 + 0.25 <span class="param">N</span>/<span class="param">D</span>) <span class="param">Qᵩ</span></div>
+                             <p class="mb-4"><span class="param">ϕ</span> = 0.90 (LRFD), <span class="param">Ω</span> = 1.67 (ASD)</p>
+                             <h4 class="text-xl font-semibold mb-2">511.1.4.2 Criterion for Rectangular HSS</h4>
+                            <div class="formula"><span class="param">Rₙ</span> = [<span class="param">Fᵧ</span><span class="param">t</span>² / (1 - <span class="param">tₚ</span>/<span class="param">B</span>)] [2<span class="param">N</span>/<span class="param">B</span> + 4(1 - <span class="param">tₚ</span>/<span class="param">B</span>)⁰.⁵] <span class="param">Qᵩ</span></div>
+                             <p class="mb-4"><span class="param">ϕ</span> = 1.00 (LRFD), <span class="param">Ω</span> = 1.50 (ASD)</p>
+                            <h3 class="text-2xl font-semibold my-4">511.1.5 Force Distributed Longitudinally (Parallel to Axis)</h3>
+                            <p>Primarily for shear tab connections. Precludes punching shear of the HSS wall.</p>
+                            <div class="formula"><span class="param">Fᵧₚ</span><span class="param">tₚ</span> ≤ <span class="param">Fᵤ</span><span class="param">t</span></div>
+                        `,
+                        cf_cap_plate: `
+                            <h3 class="text-2xl font-semibold mb-4">511.1.6 Concentrated Axial Force on Capped Rectangular HSS</h3>
+                            <p>Strength is determined for wall local yielding and wall local crippling.</p>
+                            <div class="mt-4 p-4 border-l-4 border-stone-200">
+                                <h5 class="text-lg font-semibold mb-2">a. Wall Local Yielding (per wall)</h5>
+                                <div class="formula"><span class="param">Rₙ</span> = <span class="param">Fᵧ</span><span class="param">t</span> [5<span class="param">tₚ</span> + <span class="param">N</span>] ≤ <span class="param">B</span><span class="param">Fᵧ</span><span class="param">t</span></div>
+                                <p class="mb-4"><span class="param">ϕ</span> = 1.00 (LRFD), <span class="param">Ω</span> = 1.50 (ASD)</p>
+                                <h5 class="text-lg font-semibold mb-2">b. Wall Local Crippling (per wall, compression)</h5>
+                                <div class="formula"><span class="param">Rₙ</span> = 0.8<span class="param">t</span>² [1 + (6<span class="param">N</span>/<span class="param">B</span>)(<span class="param">t</span>/<span class="param">tₚ</span>)¹·⁵] [E<span class="param">Fᵧ</span><span class="param">tₚ</span>/<span class="param">t</span>]⁰.⁵</div>
+                                <p class="mb-4"><span class="param">ϕ</span> = 0.75 (LRFD), <span class="param">Ω</span> = 2.00 (ASD)</p>
+                            </div>
+                        `,
+                    }
+                },
+                truss_connections: {
+                    title: "HSS-to-HSS Truss Connections (511.2)",
+                    nav: [
+                        { id: "tc_intro", title: "Introduction & Classes" },
+                        { id: "tc_round", title: "Criteria for Round HSS" },
+                        { id: "tc_rect", title: "Criteria for Rectangular HSS" },
+                        { id: "tc_welds", title: "Welds to Branches" },
+                    ],
+                    html: {
+                        tc_intro: `
+                            <h3 class="text-2xl font-semibold mb-4">511.2 HSS-to-HSS Truss Connections</h3>
+                            <p class="mb-4">This subsection covers connections with one or more branch members directly welded to a continuous chord. Connections are classified as T, Y, K, or Cross-connections based on how forces are equilibrated.</p>
+                             <h4 class="text-xl font-semibold mb-2">Chord-Stress Interaction (<span class="param">Qᵩ</span>)</h4>
+                            <p class="mb-4">The interaction of stresses from chord member forces and local branch forces is handled by the parameter <span class="param">Qᵩ</span>. For members in compression, this factor reduces the connection capacity.</p>
+                            <div class="formula">For chord in compression: <span class="param">Qᵩ</span> = 1.0 - 0.3<span class="param">U</span>(1+<span class="param">U</span>) (for Round HSS)</div>
+                        `,
+                        tc_round: `
+                            <h3 class="text-2xl font-semibold mb-4">511.2.2 Criteria for Round HSS</h3>
+                             <div class="p-4 limit-box rounded-md mb-4">
+                                <h5 class="text-lg font-semibold mb-2">Key Limits of Applicability</h5>
+                                <ul class="list-disc list-inside space-y-1 text-sm">
+                                    <li>Branch angle <span class="param">θ</span> ≥ 30°</li>
+                                    <li>Chord slenderness <span class="param">D</span>/<span class="param">t</span> ≤ 50 (T, Y, K), ≤ 40 (Cross)</li>
+                                    <li>Width ratio 0.2 < <span class="param">Dᵦ</span>/<span class="param">D</span> ≤ 1.0</li>
+                                </ul>
+                             </div>
+                            <h4 class="text-xl font-semibold mb-2">Branches with Axial Loads in T-, Y-, and Cross-Connections</h4>
+                            <p>Available strength is the lower of chord plastification and shear yielding (punching).</p>
+                            <div class="mt-4 p-4 border-l-4 border-stone-200">
+                                <h5 class="text-lg font-semibold mb-2">Chord Plastification (T- and Y-connections)</h5>
+                                <div class="formula"><span class="param">Pₙ</span>sin<span class="param">θ</span> = <span class="param">Fᵧ</span><span class="param">t</span>² [3.1 + 15.6<span class="param">β</span>²]<span class="param">γ</span>⁰.²<span class="param">Qᵩ</span></div>
+                                <h5 class="text-lg font-semibold mb-2 mt-4">Chord Plastification (Cross-connections)</h5>
+                                <div class="formula"><span class="param">Pₙ</span>sin<span class="param">θ</span> = <span class="param">Fᵧ</span><span class="param">t</span>² [5.7 / (1 - 0.81<span class="param">β</span>)]<span class="param">Qᵩ</span></div>
+                            </div>
+                            <h4 class="text-xl font-semibold mt-6 mb-2">Branches with Axial Loads in K-Connections</h4>
+                            <p>Available strength based on chord plastification and punching shear (gapped only).</p>
+                             <div class="mt-4 p-4 border-l-4 border-stone-200">
+                                <h5 class="text-lg font-semibold mb-2">Chord Plastification (Compression Branch)</h5>
+                                <div class="formula"><span class="param">Pₙ</span>sin<span class="param">θ</span> = <span class="param">Fᵧ</span><span class="param">t</span>² [2.0 + 11.33<span class="param">Dᵦ</span>/<span class="param">D</span>] Q₉<span class="param">Qᵩ</span></div>
+                            </div>
+                        `,
+                        tc_rect: `
+                            <h3 class="text-2xl font-semibold mb-4">511.2.3 Criteria for Rectangular HSS</h3>
+                             <div class="p-4 limit-box rounded-md mb-4">
+                                <h5 class="text-lg font-semibold mb-2">Key Limits of Applicability</h5>
+                                <ul class="list-disc list-inside space-y-1 text-sm">
+                                    <li>Branch angle <span class="param">θ</span> ≥ 30°</li>
+                                    <li>Chord slenderness <span class="param">B</span>/<span class="param">t</span> ≤ 35</li>
+                                    <li>Width ratio <span class="param">Bᵦ</span>/<span class="param">B</span> ≥ 0.25</li>
+                                    <li>Aspect Ratio: 0.5 ≤ <span class="param">H</span>/<span class="param">B</span> ≤ 2.0</li>
+                                </ul>
+                             </div>
+                            <h4 class="text-xl font-semibold mb-2">Branches with Axial Loads in T-, Y-, and Cross-Connections</h4>
+                            <p>Strength is the lowest of chord wall plastification, punching shear, sidewall strength, and uneven load distribution.</p>
+                             <div class="mt-4 p-4 border-l-4 border-stone-200">
+                                <h5 class="text-lg font-semibold mb-2">Chord Wall Plastification</h5>
+                                <div class="formula"><span class="param">Pₙ</span>sin<span class="param">θ</span> = <span class="param">Fᵧ</span><span class="param">t</span>² [2<span class="param">η</span>/(1-<span class="param">β</span>) + 4/(1-<span class="param">β</span>)⁰.⁵]<span class="param">Qᵩ</span></div>
+                            </div>
+                            <h4 class="text-xl font-semibold mt-6 mb-2">Branches with Axial Loads in Gapped K-Connections</h4>
+                             <div class="mt-4 p-4 border-l-4 border-stone-200">
+                                <h5 class="text-lg font-semibold mb-2">Chord Wall Plastification</h5>
+                                <div class="formula"><span class="param">Pₙ</span>sin<span class="param">θ</span> = <span class="param">Fᵧ</span><span class="param">t</span>² [9.8<span class="param">βₑբբ</span><span class="param">γ</span>⁰.⁵]<span class="param">Qᵩ</span></div>
+                            </div>
+                            <h4 class="text-xl font-semibold mt-6 mb-2">Branches with Axial Loads in Overlapped K-Connections</h4>
+                            <p>Strength is determined from local yielding due to uneven load distribution.</p>
+                        `,
+                        tc_welds: `
+                           <h3 class="text-2xl font-semibold mb-4">511.2.3e Welds to Branches</h3>
+                           <p class="mb-4">The non-uniformity of load transfer along the weld line shall be considered by limiting the total effective weld length, <span class="param">Lₑ</span>.</p>
+                           <h4 class="text-xl font-semibold mb-2">In T-, Y- and cross-connections</h4>
+                           <div class="formula">For <span class="param">θ</span> ≥ 60°: <span class="param">Lₑ</span> = 2(<span class="param">Hᵦ</span> - 1.2<span class="param">tᵦ</span>) / sin<span class="param">θ</span></div>
+                           <p class="text-sm text-stone-600 mb-4">A different formula applies for <span class="param">θ</span> ≤ 50°, with linear interpolation between 50° and 60°.</p>
+                           <h4 class="text-xl font-semibold mb-2">In gapped K-connections</h4>
+                           <div class="formula">For <span class="param">θ</span> ≥ 60°: <span class="param">Lₑ</span> = 2(<span class="param">Hᵦ</span> - 1.2<span class="param">tᵦ</span>) / sin<span class="param">θ</span> + (<span class="param">Bᵦ</span> - 1.2<span class="param">tᵦ</span>)</div>
+                        `
+                    }
+                },
+                moment_connections: {
+                    title: "HSS-to-HSS Moment Connections (511.3)",
+                    nav: [
+                        { id: "mc_intro", title: "Introduction" },
+                        { id: "mc_round", title: "Criteria for Round HSS" },
+                        { id: "mc_rect", title: "Criteria for Rectangular HSS" },
+                        { id: "mc_combined", title: "Combined Forces" },
+                    ],
+                    html: {
+                       mc_intro: `
+                            <h3 class="text-2xl font-semibold mb-4">511.3 HSS-to-HSS Moment Connections</h3>
+                            <p class="mb-4">This subsection covers connections where branch members are loaded by in-plane or out-of-plane bending moments. Connections are classified as T-, Y-, or Cross-connections.</p>
+                            <p>Similar to truss connections, the chord-stress interaction parameter <span class="param">Qᵩ</span> is used to account for forces in the continuous chord member.</p>
+                       `,
+                       mc_round: `
+                            <h3 class="text-2xl font-semibold mb-4">511.3.2 Criteria for Round HSS</h3>
+                            <h4 class="text-xl font-semibold mb-2">Branches with In-Plane Bending Moments</h4>
+                            <p>Strength is the lower of chord plastification and punching shear.</p>
+                            <div class="mt-4 p-4 border-l-4 border-stone-200">
+                                <h5 class="text-lg font-semibold mb-2">Chord Plastification</h5>
+                                <div class="formula"><span class="param">Mₙ₋ᵢₚ</span>sin<span class="param">θ</span> = 5.39<span class="param">Fᵧ</span><span class="param">t</span>²<span class="param">γ</span>⁰.⁵<span class="param">β</span><span class="param">Dᵦ</span><span class="param">Qᵩ</span></div>
+                            </div>
+                            <h4 class="text-xl font-semibold mt-6 mb-2">Branches with Out-of-Plane Bending Moments</h4>
+                            <p>Strength is the lower of chord plastification and punching shear.</p>
+                             <div class="mt-4 p-4 border-l-4 border-stone-200">
+                                <h5 class="text-lg font-semibold mb-2">Chord Plastification</h5>
+                                <div class="formula"><span class="param">Mₙ₋ₒₚ</span>sin<span class="param">θ</span> = <span class="param">Fᵧ</span><span class="param">t</span>²<span class="param">Dᵦ</span>[3.0 / (1 - 0.81<span class="param">β</span>)]<span class="param">Qᵩ</span></div>
+                            </div>
+                       `,
+                       mc_rect: `
+                             <h3 class="text-2xl font-semibold mb-4">511.3.3 Criteria for Rectangular HSS</h3>
+                             <p class="mb-4">These criteria generally apply for branch angles (θ) of approximately 90°.</p>
+                             <h4 class="text-xl font-semibold mb-2">Branches with In-Plane Bending Moments</h4>
+                             <p>Strength is the lowest of chord wall plastification, sidewall local yielding, and uneven load distribution.</p>
+                             <div class="mt-4 p-4 border-l-4 border-stone-200">
+                                <h5 class="text-lg font-semibold mb-2">Chord Wall Plastification</h5>
+                                <div class="formula"><span class="param">Mₙ₋ᵢₚ</span> = <span class="param">Fᵧ</span><span class="param">t</span>²<span class="param">Hᵦ</span>[(1/2<span class="param">η</span>) + 2/(1-<span class="param">β</span>)⁰.⁵ + <span class="param">η</span>/(1-<span class="param">β</span>)]<span class="param">Qᵩ</span></div>
+                            </div>
+                             <h4 class="text-xl font-semibold mt-6 mb-2">Branches with Out-of-Plane Bending Moments</h4>
+                             <p>Strength is the lowest of chord wall plastification, sidewall local yielding, uneven load distribution, and chord distortional failure.</p>
+                              <div class="mt-4 p-4 border-l-4 border-stone-200">
+                                <h5 class="text-lg font-semibold mb-2">Chord Wall Plastification</h5>
+                                <div class="formula"><span class="param">Mₙ₋ₒₚ</span> = <span class="param">Fᵧ</span><span class="param">t</span>²[0.5<span class="param">Hᵦ</span>(1+<span class="param">β</span>)/(1-<span class="param">β</span>) + [2<span class="param">B</span><span class="param">Bᵦ</span>(1+<span class="param">β</span>)/(1-<span class="param">β</span>)]⁰.⁵]<span class="param">Qᵩ</span></div>
+                            </div>
+                       `,
+                       mc_combined: `
+                            <h3 class="text-2xl font-semibold mb-4">Combined Forces in T- and Cross-Connections</h3>
+                            <p class="mb-4">Connections subject to combined branch axial load, in-plane bending, and out-of-plane bending must satisfy the following interaction equations.</p>
+                            <h4 class="text-xl font-semibold mb-2">LRFD (Load and Resistance Factor Design)</h4>
+                            <div class="formula">(<span class="param">Pᵣ</span>/<span class="param">ϕ</span><span class="param">Pₙ</span>) + (<span class="param">Mᵣ₋ᵢₚ</span>/<span class="param">ϕ</span><span class="param">Mₙ₋ᵢₚ</span>)² + (<span class="param">Mᵣ₋ₒₚ</span>/<span class="param">ϕ</span><span class="param">Mₙ₋ₒₚ</span>)² ≤ 1.0</div>
+                             <h4 class="text-xl font-semibold mt-6 mb-2">ASD (Allowable Strength Design)</h4>
+                             <div class="formula">(<span class="param">Pᵣ</span>/(<span class="param">Pₙ</span>/<span class="param">Ω</span>)) + (<span class="param">Mᵣ₋ᵢₚ</span>/(<span class="param">Mₙ₋ᵢₚ</span>/<span class="param">Ω</span>)) + (<span class="param">Mᵣ₋ₒₚ</span>/(<span class="param">Mₙ₋ₒₚ</span>/<span class="param">Ω</span>)) ≤ 1.0</div>
+                       `
+                    }
+                }
+            }
+        };
+
+        const mainNavEl = document.getElementById('main-nav');
+        const sideNavEl = document.getElementById('side-nav');
+        const sideNavTitleEl = document.getElementById('side-nav-title');
+        const contentEl = document.getElementById('content-container');
+        let currentMainSection = '';
+        let currentSubSection = '';
+
+        function renderContent(mainSectionId, subSectionId) {
+            currentMainSection = mainSectionId;
+            currentSubSection = subSectionId;
+
+            const mainSectionData = db.content[mainSectionId];
+            if (!mainSectionData) {
+                contentEl.innerHTML = db.content.welcome.html;
+                sideNavEl.innerHTML = '';
+                sideNavTitleEl.innerText = '';
+                return;
+            }
+
+            // Update main nav active state
+            document.querySelectorAll('#main-nav .main-nav-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.section === mainSectionId);
+            });
+            
+            // Populate side nav
+            sideNavTitleEl.innerText = mainSectionData.title;
+            sideNavEl.innerHTML = mainSectionData.nav.map(item => `
+                <a href="#" class="side-nav-link px-4 py-2 rounded-md text-stone-600" data-section="${mainSectionId}" data-subsection="${item.id}">${item.title}</a>
+            `).join('');
+
+            // Set default subsection if none provided
+            if (!subSectionId || !mainSectionData.html[subSectionId]) {
+                currentSubSection = mainSectionData.nav[0].id;
+            }
+
+            // Update side nav active state
+            document.querySelectorAll('#side-nav .side-nav-link').forEach(link => {
+                link.classList.toggle('active', link.dataset.subsection === currentSubSection);
+            });
+            
+            // Render content
+            contentEl.innerHTML = mainSectionData.html[currentSubSection];
+            enhanceParameters();
+        }
+
+        function enhanceParameters() {
+            const paramSpans = contentEl.querySelectorAll('.param');
+            paramSpans.forEach(span => {
+                const paramKey = Object.keys(db.definitions).find(key => db.definitions[key].name === span.textContent);
+                if (paramKey) {
+                    const paramDef = db.definitions[paramKey];
+                    span.classList.add('font-bold', 'cursor-pointer', 'text-blue-600');
+                    span.setAttribute('title', paramDef.desc);
+                }
+            });
+        }
+        
+        function setupNavigation() {
+            const mainNavItems = [
+                { id: 'concentrated_forces', title: 'Concentrated Forces' },
+                { id: 'truss_connections', title: 'Truss Connections' },
+                { id: 'moment_connections', title: 'Moment Connections' },
+            ];
+
+            mainNavEl.innerHTML = mainNavItems.map(item => `
+                <button class="main-nav-btn px-3 py-2 text-md font-medium text-stone-600" data-section="${item.id}">${item.title}</button>
+            `).join('');
+
+            mainNavEl.addEventListener('click', (e) => {
+                if (e.target.matches('.main-nav-btn')) {
+                    const mainSectionId = e.target.dataset.section;
+                    renderContent(mainSectionId);
+                }
+            });
+
+            sideNavEl.addEventListener('click', (e) => {
+                 e.preventDefault();
+                if (e.target.matches('.side-nav-link')) {
+                    const mainSectionId = e.target.dataset.section;
+                    const subSectionId = e.target.dataset.subsection;
+                    renderContent(mainSectionId, subSectionId);
+                }
+            });
+        }
+
+        // Initial Load
+        document.addEventListener('DOMContentLoaded', () => {
+            setupNavigation();
+            contentEl.innerHTML = db.content.welcome.html;
+        });
+
+    </script>
+</body>
+</html>
